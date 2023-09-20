@@ -1,13 +1,27 @@
-apiVersion: scaffolder.backstage.io/v1beta3
+piVersion: scaffolder.backstage.io/v1beta3
+# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-template
 kind: Template
 metadata:
-  name: expressjs-template
-  title: Express.js Template
+  name: express-golden-path
+  title: ExpressJs - Golden Path
   description: Creates a an Expressjs app for the StageCentral Workshop
 spec:
-  owner: user:guest
-  type: app
+  owner: user:Coda1304
+  type: service
+
+ 
+
+  # These parameters are used to generate the input form in the frontend, and are
+  # used to gather input data for the execution of the template.
   parameters:
+    - title: Owner of project
+      required:
+        - owner
+      properties:
+         owner:
+          type: string
+          ui:field: OwnerPicker
+          ui:options: {}
     - title: Fill in some steps
       required:
         - name
@@ -21,30 +35,34 @@ spec:
             rows: 5
     - title: Choose a location
       required:
-        - repoUrl
+       - repoUrl
       properties:
         repoUrl:
-          title: Repository Location
-          type: string
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts:
-              - github.com
+         title: Repository Location
+         type: string
+         ui:field: RepoUrlPicker
+         ui:options:
+          allowedHosts:
+          - github.com
+  # These steps are executed in the scaffolder backend, using data that we gathered
+  # via the parameters above.
   steps:
+    # Each step executes an action, in this case one templates files into the working directory.
     - id: fetch-template
       name: Fetch Template Repo
       action: fetch:template
       input:
-        url: ./express
-        #this defines that only .njk files will be templated
-        templateFileExtension: true
-        values:
-          name: ${{ parameters.name }}
+          url: ./express
+            #this defines that only .njk files will be templated
+          templateFileExtension: true
+          values:
+           name: ${{ parameters.name }}
+           owner: ${{ parameters.owner }}
     - id: write-catalog-info
       name: Write Catalog Info
-      action: catalog-write
+      action: catalog:write
       input:
-        entity: 
+        entity:
           apiVersion: backstage.io/v1alpha1
           kind: Component
           metadata:
@@ -52,27 +70,30 @@ spec:
             namespace: default
             description: The ${{ parameters.name }} service
           spec:
-            type: app
-            lifecycle: production
-            owner: group:guests
+              type: app
+              lifecycle: production
+              owner: ${{ parameters.owner }}
 
     - id: publish
       name: Publish
       action: publish:github
       input:
-        allowedHosts: ['github.com']
-        description: This is ${{ parameters.name }}
-        repoUrl: ${{ parameters.repoUrl }}
+         allowedHosts: ['github.com']
+         description: This is ${{ parameters.name }}
+         repoUrl: ${{ parameters.repoUrl }}
+
+ 
+
     - id: register
       name: Register
       action: catalog:register
       input:
-        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
-        catalogInfoPath: '/catalog-info.yaml'
-output:
+          repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+          catalogInfoPath: '/catalog-info.yaml'
+  output:
     links:
-      - title: Repository
-        url: ${{ steps['publish'].output.remoteUrl }}
-      - title: Open in catalog
-        icon: catalog
-        entityRef: ${{ steps['register'].output.entityRef }}
+    - title: Repository
+      url: ${{ steps['publish'].output.remoteUrl }}
+    - title: Open in catalog
+      icon: catalog
+      entityRef: ${{ steps['register'].output.entityRef }}
